@@ -85,7 +85,7 @@ module GitFeed
 
       info "Starting RSS Feed URL search for each url..."
 
-      API.fetch_each_blog_page(blogs_urls, options[:threads_number] * 2)
+      API.fetch_each_blog_page(blogs_urls, options[:threads_number])
 
       all_blogs_page = Dir.glob(File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME, '*'))
       blogs_feeds = []
