@@ -22,9 +22,9 @@ module GitFeed
     extend GitFeed::Utils
 
     # Configuration constants
-    THREADS_NUMBER = 10
+    THREADS_NUMBER = 20
     GITHUB_FOLLOWING_USERS_ENDPOINT = "https://api.github.com/users/%{username}/following?page=%{page}&per_page=%{per_page}"
-    BLOG_PAGES_DEST_DIRNAME = File.join(Utils::DATA_DIRECTORY, 'blog-pages')
+    BLOG_PAGES_DEST_DIRNAME = 'blog-pages'
     INVALID_URL_PAGE_CONTENT = '[GIT_FEED_INVALID_PAGE_CONTENT]'
 
     module_function
@@ -37,15 +37,26 @@ module GitFeed
 
     def fetch_all_following_users(username, per_page, auth_token = nil)
       page = 1
-      data = [fetch_following_user(username, page, per_page, auth_token)] # first page
+      data = nil
+
+      begin
+        data = [fetch_following_user(username, page, per_page, auth_token)] # first page
+      rescue Exception => e
+        error "Error fetching first page of users that \"#{username}\" follows in Github"
+        error "Message: #{e.message}"
+      end
 
       # if there's no data in first page, theres no more data to be scrapped
-      return [] if data.empty?
+      return [] if data.nil? || data.empty?
 
       loop do
-        print "\r#{page}"
+        print "\rCurrent Page: #{page}"
 
-        response = fetch_following_user(username, page = page + 1, per_page, auth_token)
+        begin
+          response = fetch_following_user(username, page = page + 1, per_page, auth_token)
+        rescue Exception => e
+          error e.message
+        end
 
         break if response.nil? || response.empty?
 
@@ -67,7 +78,7 @@ module GitFeed
             users_data << get_github_data(user['url'], auth_token)
           rescue Exception => e
             puts
-            error "Error download #{user} data on Github"
+            error "Error downloading \"#{user}\" data on Github API"
             error e.message
           end
 
@@ -98,7 +109,7 @@ module GitFeed
     end
 
     def fetch_blog_page(url, dest_dir = BLOG_PAGES_DEST_DIRNAME, retries = 1)
-      filename = File.expand_path(File.join(dest_dir, "#{normalize_url(url)}.html"), ROOT_DIR)
+      filename = File.join(dest_dir, "#{normalize_url_for_filename(url)}.html")
 
       return nil if file_exists?(filename)
 
@@ -111,7 +122,7 @@ module GitFeed
       rescue Exception => e
         puts
 
-        error "[Retry: {#{retries}} Error in #{url} | #{e.message}"
+        error "[Retry: {#{retries}}] Error in #{url} | #{e.message}"
 
         # Save the file with no content to avoid hiting this same URL if
         # the error persisted between all retries attemps

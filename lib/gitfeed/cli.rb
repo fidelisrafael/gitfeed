@@ -31,7 +31,7 @@ module GitFeed
       following_details_filename = "#{username}_following_users.json"
       blogs_list_filename = "#{username}_following_users_blogs.json"
 
-      info "Ok, lets start grabing the data for user #{formatted_username}\n\n"
+      info "Ok, lets start grabbing the data for user #{formatted_username}\n\n"
 
       users = nil
 
@@ -45,9 +45,9 @@ module GitFeed
 
         info "All users followed by #{formatted_username} cached. Total of #{users.size.to_s.underline} users"
       else
-        info "Downloading the list of users which #{formatted_username} follows"
+        info "Downloading the list of users which #{formatted_username} follows. This can take a while..."
         # Only hit Github API in first attempt
-        following_users = get_json_file_data(following_basic_filename) || fetch_all_following_users(username, 100, DEFAULT_GITHUB_TOKEN)
+        following_users = get_json_file_data(following_basic_filename) || API.fetch_all_following_users(username, 100, DEFAULT_GITHUB_TOKEN)
 
         puts
 
@@ -84,7 +84,7 @@ module GitFeed
 
       API.fetch_each_blog_page(blogs_urls, options[:threads_number] * 2)
 
-      all_blogs_page = Dir.glob(File.join(API::BLOG_PAGES_DEST_DIRNAME, '*'))
+      all_blogs_page = Dir.glob(File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME, '*'))
       blogs_feeds = {}
       user_blogs_pages = blogs_urls.map(&method(:normalize_url_for_filename))
 
@@ -100,14 +100,10 @@ module GitFeed
 
           blogs_feeds[page] = TruffleHog.parse_feed_urls(page_content)
         rescue => e
-          if log_errors?
-            puts
+          puts
 
-            error "Something went wrong while reading the page \"#{page}\". Skipping..."
-            error "Message: #{e.message}"
-          end
-
-          next
+          error "Something went wrong while reading the page \"#{page}\". Skipping..."
+          error "Message: #{e.message}"
         end
       end
 

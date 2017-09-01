@@ -37,7 +37,11 @@ module GitFeed
     end
 
     def save_file(filename, data, json = true, open_mode = 'wb')
-      File.open(File.join(DATA_DIRECTORY, filename), open_mode) do |file|
+      full_filename = File.join(DATA_DIRECTORY, filename)
+
+      FileUtils.mkdir_p(File.dirname(full_filename))
+
+      File.open(full_filename, open_mode) do |file|
         file.write(json ? JSON.pretty_generate(data) : data)
       end
     end
