@@ -36,19 +36,16 @@ Eg:
 $ bin/gitfeed fidelisrafael
 ```
 
-![Example of running](./assets/images/run_example.jpg)
-
-[TODO]: Update this image to one more updated.  
-
-
 ---
 
 ### How this works?
 
-1 - First the script fetch all users that one specific user follows in github, eg: [`fidelisrafael`](https://api.github.com/users/fidelisrafael/following)  
-2 - After this the script fetch the profile information of each user that is followed by this user to grab more specific information(more precise the `blog_url` attribute).  
-3 - In sequence, a JSON file with the **site urls** of all users fetched from Github is created, and a new process is started to concurrently download the main page of **each and all site url**  
-4 - And finally another process is executed to generate a final file with RSS feeds urls from the people you're following...**Pretty neat** no?
+![Screenshot of script running](./assets/images/run_example.png)  
+
+* **1 -** First the script fetch all users that one specific user follows in github, eg: [`fidelisrafael`](https://api.github.com/users/fidelisrafael/following)  
+* **2 -** After this the script fetch the profile information of each user that is followed by this user to grab more specific information(more precise the `blog_url` attribute).  
+* **3 -** In sequence, a JSON file with the **site urls** of all users fetched from Github is created, and a new process is started to concurrently download the main page of **each and all site url**  
+* **4 -** And finally another process is executed to generate a final file with RSS feeds urls from the people you're following...**Pretty neat** no?
 
 #### Example of a result file with RSS urls
 

@@ -22,6 +22,12 @@ module GitFeed
     DEFAULT_GITHUB_TOKEN = 'ec445fd93d4aaab608ce34d14230f187ef0691dd'
 
     def run!(username, options = {})
+      section 'GitFeed' do
+        _run!(username, options)
+      end
+    end
+
+    def _run!(username, options)
       options = DEFAULT_OPTIONS.merge(options)
 
       username || raise('You must supply the username as second parameter. Eg: `ruby github.rb fidelisrafael`')
