@@ -85,7 +85,7 @@ module GitFeed
       API.fetch_each_blog_page(blogs_urls, options[:threads_number] * 2)
 
       all_blogs_page = Dir.glob(File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME, '*'))
-      blogs_feeds = {}
+      blogs_feeds = []
       user_blogs_pages = blogs_urls.map(&method(:normalize_url_for_filename))
 
       all_blogs_page.each do |page|
@@ -98,19 +98,19 @@ module GitFeed
 
           next if page_content.nil? || page_content.empty?
 
-          blogs_feeds[page] = TruffleHog.parse_feed_urls(page_content)
+          blogs_feeds.concat(TruffleHog.parse_feed_urls(page_content).flatten)
         rescue => e
           puts
 
-          error "Something went wrong while reading the page \"#{page}\". Skipping..."
+          error "Something went wrong while reading the file \"#{page}\". Skipping..."
           error "Message: #{e.message}"
         end
       end
 
-      save_file("#{username}_rss_feeds.json", blogs_feeds)
+      save_file("#{username}_rss_feeds.json", blogs_feeds.flatten)
 
       total_scanned = user_blogs_pages.size
-      total_found = blogs_feeds.values.flatten.size
+      total_found = blogs_feeds.flatten.size
       percent_success = ((total_found * 100)/total_scanned).round(2) rescue 0
 
       puts
