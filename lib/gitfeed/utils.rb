@@ -22,12 +22,20 @@ module GitFeed
       end
     end
 
+    def current_api_key_token_for_github
+      file = File.join(ROOT_DIR, '.github-api-key')
+
+      File.exist?(file) ? File.read(file).chop : ''
+    end
+
     def get_github_data(url, auth_token = nil)
       JSON.parse(get(url, github_http_headers(auth_token)))
     end
 
     def github_http_headers(auth_token)
-      auth_token.nil? ? {} : { "Authorization" => "bearer #{auth_token}" }
+      return {} if auth_token.nil? || auth_token.empty?
+
+      { "Authorization" => "bearer #{auth_token}" }
     end
 
     def has_cached_data?(filename, min_bytes_size = 1000)

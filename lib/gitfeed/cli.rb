@@ -18,9 +18,6 @@ module GitFeed
       threads_number: 10
     }
 
-    # Same constants that may be modified
-    DEFAULT_GITHUB_TOKEN = 'ec445fd93d4aaab608ce34d14230f187ef0691dd'
-
     def run!(username, options = {})
       section 'GitFeed' do
         _run!(username, options)
@@ -53,7 +50,7 @@ module GitFeed
       else
         info "Downloading the list of users which #{formatted_username} follows. This can take a while..."
         # Only hit Github API in first attempt
-        following_users = get_json_file_data(following_basic_filename) || API.fetch_all_following_users(username, 100, DEFAULT_GITHUB_TOKEN)
+        following_users = get_json_file_data(following_basic_filename) || API.fetch_all_following_users(username, 100, current_api_key_token_for_github)
 
         puts
 
@@ -66,7 +63,7 @@ module GitFeed
         info "Now, we will get the site url of each followed user..."
         info "We will scrap with the total number of #{options[:threads_number].to_s.underline.bold.colorize(:yellow)} threads.\n\n"
 
-        users_data = API.fetch_each_following_user(following_users, DEFAULT_GITHUB_TOKEN)
+        users_data = API.fetch_each_following_user(following_users, current_api_key_token_for_github)
 
         puts "\n"
 

@@ -2,7 +2,7 @@
 
 ---
 
-### What's is this?
+## What's is this?
 
 The purpose of this application it's to fetch all rss feeds links from the profile of people that you(or any person) follows in Github, so you can create a RSS feed based on people you **actually care about the content**.  
 
@@ -10,21 +10,33 @@ This is the first part of application, you may want to check the HTTP API and th
 
 ---
 
-### How to run?
+## Running in development
 
-Clone this repository:
+**1 - Clone this repository:**
 
 ```
 $ git clone git@bitbucket.org:fidelisrafael/gitfeed-backend.git
 ```
 
-Install ruby gems dependencies:
+**2 - Install ruby gems dependencies:**
 
 ```
 $ bundle install
 ```
 
-And just run:
+**3 - Generate Github API Token:**
+
+**Note**: *This is optional, but you will not able to send too many requests to Github API since theres a [Rate limit](https://developer.github.com/v3/#rate-limiting) for HTTP requests without authorization.*
+
+Now you will need a API Key token to fetch user data from Github API with increased Rate Limit.
+Issue a new API token from [Github Interface](https://github.com/settings/tokens).
+After issuing the token, generates a new file in root directory with name `.github-api-key` and add the token code there, eg:
+
+```
+$ echo 'MY_GITHUB_TOKEN' > .github-api-key
+```
+
+**4 - Run this thing!:**
 
 ```
 $ bin/gitfeed [github_username]
@@ -38,7 +50,7 @@ $ bin/gitfeed fidelisrafael
 
 ---
 
-### How this works?
+## How this works?
 
 ![Screenshot of script running](./assets/images/run_example.png)  
 
@@ -49,7 +61,7 @@ $ bin/gitfeed fidelisrafael
 
 #### Example of a result file with RSS urls
 
-```
+```json
 [
   "http://nielsjansen.dk/rss",
   "https://www.simplicidade.org/index.xml",
@@ -70,13 +82,12 @@ $ bin/gitfeed fidelisrafael
 
 ---
 
-### Credits
+## Credits
 
-Rafael Fidelis <rafaelfid3lis@gmail.com>
+Rafael Fidelis \<rafaelfid3lis@gmail.com\>
 
 ---
 
-### Observations
+## Observations
 
 - Only tested on `ruby 2.4.0p0 (2016-12-24 revision 57164) [x86_64-linux]`
-
