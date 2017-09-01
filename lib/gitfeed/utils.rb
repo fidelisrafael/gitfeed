@@ -4,6 +4,8 @@
 # rubocop:disable Layout/SpaceInsideBlockBraces
 
 require 'open-uri'
+require 'net/http'
+require 'openssl'
 require 'timeout'
 
 module GitFeed
@@ -18,7 +20,29 @@ module GitFeed
 
     def get(url, headers = {}, timeout = HTTP_REQUES_TIMEOUT)
       ::Timeout::timeout(timeout) do
-        open(url, headers).read
+        begin
+          uri = URI(normalize_uri(url))
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = url.start_with?('https')
+          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          request = Net::HTTP::Get.new(uri.request_uri, headers)
+
+          response = http.request(request)
+
+          if response['Location']
+            new_url = URI(response['Location'])
+
+            # Handle the case when server replies with "Location" header as relative path, eg:
+            # Location: /blog
+            if new_url.host.nil?
+              new_url = "#{new_url.scheme || uri.scheme}://#{uri.host}/#{new_url}"
+            end
+
+            return get(new_url.to_s, headers, timeout)
+          end
+
+          response.body
+        end
       end
     end
 
@@ -33,9 +57,7 @@ module GitFeed
     end
 
     def github_http_headers(auth_token)
-      return {} if auth_token.nil? || auth_token.empty?
-
-      { "Authorization" => "bearer #{auth_token}" }
+      auth_token.nil? ? {} : { "Authorization" => "bearer #{auth_token}" }
     end
 
     def has_cached_data?(filename, min_bytes_size = 1000)
