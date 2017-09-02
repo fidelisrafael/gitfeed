@@ -94,7 +94,7 @@ module GitFeed
 
       body = get_github_data(endpoint, auth_user, auth_token)
 
-      save_file(filename, body)
+      save_file(filename, body) if save_user_data?(username, body)
 
       body
     end
@@ -115,6 +115,13 @@ module GitFeed
       end
 
       pool.shutdown
+    end
+
+    def save_user_data?(username, user_data)
+      return false if (username.nil? || username.empty?) || (user_data.nil? || user_data.empty?)
+      return false if user_data['message']
+
+      true
     end
 
     # Generic Blog Pages related stuff
