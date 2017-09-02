@@ -1,136 +1,62 @@
+# frozen_string_literal: true
+
 require_relative 'api'
 require_relative 'utils'
+require_relative 'cli/output_helpers'
+require_relative 'cli/commands'
 
 # Support Dependencies
 require_relative 'support/string'
 require_relative 'support/truffle_hog'
 
+# rubocop:disable Metrics/LineLength
+# rubocop:disable Metrics/AbcSize
+# rubocop:disable Metrics/MethodLength
+
 module GitFeed
+  # Main module to serve as entry point for users. This module is build on
+  # top of `GitFeed::API` and lives to be more informative as possible for users
+  # through log messages and outputs in each step of processing.
   module CLI
     # Add as class methods
     extend GitFeed::Utils
+    extend GitFeed::CLI::OutputHelpers
+    extend GitFeed::CLI::Commands
 
     module_function
 
-    DEFAULT_OPTIONS = {
-      verbose: true,
-      log_errors: true,
-      threads_number: 10,
-      sites_threads_number: 20,
-      per_page: 100
-    }
+    def run!(username, verbose = true, per_page = 100)
+      @verbose = verbose
 
-    def run!(username, options = {})
       section 'GitFeed' do
-        _run!(username, options)
-      end
-    end
-
-    def _run!(username, options)
-      username || raise("You must supply the username as second parameter. Eg: `#{$0} fidelisrafael`")
-
-      # Variables
-      options = DEFAULT_OPTIONS.merge(options)
-      auth_token = current_api_key_token_for_github
-      blogs_list_filename = File.join(username, 'following_users_blogs.json')
-      blogs_rss_feeds_filename = File.join(username, 'rss_feeds.json')
-
-      # Real stuff happening
-      following_users = fetch_all_following_users_pages(username, auth_token, options)
-      users = fetch_each_following_user(username, following_users, auth_token, options)
-
-      fetch_each_blog_page(username, blogs_list_filename, users, options)
-      generate_filtered_rss_blogs(username, blogs_rss_feeds_filename, options)
-    end
-
-
-    def fetch_all_following_users_pages(username, auth_token, options = {})
-      following_users = []
-
-      section 'Download following users pages' do
-        info "Ok, lets start grabbing all pages of following users for #{format_username(username)}\n"
-
-        # Download all following users pages to be iterate in next step
-        # (or just skip if is already in file system)
-        API.fetch_all_following_users_pages(username, options[:per_page], auth_token) do |_, current, total|
-          print_counter current.next, total
+        unless username
+          error("You must supply the username as second parameter. Eg: `#{$PROGRAM_NAME} fidelisrafael`")
+          exit
         end
 
-        puts
+        # Variables
+        auth_token = current_api_key_token_for_github
+        blogs_list_filename = File.join(username, 'following_users_blogs.json')
+        blogs_rss_feeds_filename = File.join(username, 'rss_feeds.json')
+        blogs_page_dir = File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME)
 
-        following_pages = File.join(Utils::DATA_DIRECTORY, username, 'following_pages', '*')
-        following_users = parse_json_directory(following_pages)
+        # Real stuff happening
+        # Frist step: Download all following pages of given username
+        following_users = fetch_each_following_users_pages(username, per_page, auth_token)
+        # After download all users of each page download above
+        users = fetch_each_user_data(following_users, auth_token)
 
-        info "[OK] downloaded"
-        info "Total of #{following_users.size.to_s.underline} users followed by #{format_username(username)}"
-      end
+        # With all users followed by `username` downloaded we can obtain their blog url
+        blogs_urls = users.map { |user| user['blog'] }.reject(&:empty?)
+        save_file(blogs_list_filename, blogs_urls)
 
-      return following_users
-    end
+        # Now, we concurrently download each given URL in `blogs_urls` array
+        fetch_each_blog_page(blogs_urls)
+        blogs_page = Dir.glob(File.join(blogs_page_dir, '*.html'))
 
-    def fetch_each_following_user(username, users_pages, auth_token, _options = {})
-      users = []
-
-      section 'Download users pages' do
-        info "Downloading the list of users which #{format_username(username)} follows. This can take a while..."
-
-        API.fetch_each_following_user(users_pages, auth_token) do |_, current, total|
-          print_counter current.next, total
-        end
-
-        puts
-
-        users = users_pages.flat_map do |user|
-          get_json_file_data(File.join('github_users', "#{user['login']}.json"))
-        end.compact
-
-        info "[OK] All users followed by #{format_username(username)} downloaded. Total of #{users.size.to_s.underline} users\n"
-      end
-
-      return users
-    end
-
-    def fetch_each_blog_page(username, filename, users, options = {})
-      section 'Blogs links' do
-        info "Generating the file with all links....\n"
-
-        blogs_urls = users.map {|d| d['blog'] }.reject(&:empty?)
-
-        save_file(filename, blogs_urls)
-
-        info "[OK] There a total of #{blogs_urls.size.to_s.underline.bold} blogs in users followed by user #{format_username(username)}"
-        info "[OK] File generated. See #{filename.underline}\n\n"
-
-        info "Now, we will download the main page of each blog url found in #{format_username(username)} following users"
-        info 'This can take a few minutes...'
-
-        API.fetch_each_blog_page(blogs_urls, options[:sites_threads_number]) do |_, current, total|
-          print_counter current.next, total
-        end
-
-        puts
-      end
-    end
-
-    def generate_filtered_rss_blogs(username, filename, options = {})
-      section 'RSS File Generation' do
-        info "Starting RSS Feed URL search for each url..."
-
-        all_blogs_page = Dir.glob(File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME, '*'))
-        blogs_feeds = API.extract_rss_from_blog_pages(all_blogs_page) do |_, current, total|
-          print_counter current.next, total
-        end
-
-        puts
-
-        save_file(filename, blogs_feeds.flatten)
-
-        total_scanned = all_blogs_page.size
-        total_found = blogs_feeds.flatten.size
-        percent_success = ((total_found * 100)/total_scanned).round(2) rescue 0
-
-        info "[OK] Saved. Extracted a total of #{total_found.to_s.underline.colorize(:yellow)} RSS feed links from #{total_scanned.to_s.underline.colorize(:pink)} pages"
-        info "This mean that the percentage of success was: #{"#{percent_success}%".to_s.underline.bold.colorize(:green)}"
+        # And finally: Generates a JSON file with all found RSS and Atom feeds in
+        # all urls found in users that `username` follows in Github.
+        generate_rss_feed_json(blogs_page, blogs_rss_feeds_filename)
       end
     end
   end

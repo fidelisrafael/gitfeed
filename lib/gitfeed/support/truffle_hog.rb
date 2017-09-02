@@ -1,4 +1,4 @@
-# encoding: UTF-8
+# frozen_string_literal: true
 
 # source: https://github.com/pauldix/truffle-hog/blob/master/lib/truffle-hog.rb
 module TruffleHog

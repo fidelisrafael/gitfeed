@@ -1,5 +1,17 @@
 #!/usr/bin/env ruby
 
+require 'bundler'
+
+Bundler.require(:default)
+
 require_relative '../lib/gitfeed/cli'
 
-GitFeed::CLI.run!(ARGV[0])
+begin
+  GitFeed::CLI.run!(ARGV[0], ENV['VERBOSE'].nil? || ENV['VERBOSE'] == 'true')
+rescue Interrupt
+  # In case of user manually interrupted the script
+  # or exception was raised in code
+  puts GitFeed::CLI::OutputHelpers.line_marker('=')
+  GitFeed::CLI::OutputHelpers.error('Interrupt signal detected...stopping...')
+  puts GitFeed::CLI::OutputHelpers.line_marker('=')
+end

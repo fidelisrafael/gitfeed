@@ -1,3 +1,11 @@
+# frozen_string_literal: true
+
+# rubocop:disable Metrics/LineLength
+# rubocop:disable Style/FormatStringToken
+# rubocop:disable Style/FormatString
+# rubocop:disable Style/ModuleLength
+# rubocop:disable Style/MethodLength
+
 # Core dependencie
 require_relative 'utils'
 
@@ -17,73 +25,141 @@ require_relative 'support/truffle_hog'
 Thread.abort_on_exception = true
 
 module GitFeed
+  # This module holds all needed methods to perform standartized and core actions in GitFeed, such
+  # as downloading and saving data, dealing with cache and multi threading.
   module API
     # Add as class methods
     extend GitFeed::Utils
 
     # Configuration constants
+    # Number of default threads when performing concurrently tasks
     THREADS_NUMBER = 20
-    GITHUB_FOLLOWING_USERS_ENDPOINT = 'https://api.github.com/users/%{username}/following?page=%{page}&per_page=%{per_page}'.freeze
+    # Endoint to obtain following users in Github
+    GITHUB_API_URL = 'https://api.github.com'.freeze
+    GITHUB_FOLLOWING_USERS_ENDPOINT = "#{GITHUB_API_URL}/users/%{username}/following?page=%{page}&per_page=%{per_page}".freeze
+    # Where to save the data downloaded as subdirectory in data/ root directory.
     BLOG_PAGES_DEST_DIRNAME = 'blog-pages'.freeze
 
     module_function
 
-    def fetch_following_users(username, page, per_page, auth_token = nil)
+    # Github Following Pages stuff
+    def get_following_page(username, page, per_page, auth_token = nil)
       endpoint = GITHUB_FOLLOWING_USERS_ENDPOINT % { username: username, page: page, per_page: per_page }
 
       get(endpoint, github_http_headers(auth_token))
     end
 
-    def get_following_user_data(username, page, per_page, auth_token = nil)
-      filename = File.join(username, 'following_pages', "page_#{"%02d" % page}_per_page_#{per_page}.json")
+    def fetch_following_page(username, page, per_page, auth_token = nil)
+      filename = File.join(username, 'following_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
 
-      return get_json_file_data(filename) if has_cached_data?(filename)
+      return get_json_file_data(filename) if data_in_cache?(filename)
 
-      response = fetch_following_users(username, page, per_page, auth_token)
+      response = get_following_page(username, page, per_page, auth_token)
       body = JSON.parse(response.body)
 
       save_file(filename, body)
 
-      return body
+      body
     end
 
-    def fetch_all_following_users_pages(username, per_page, auth_token = nil)
-      first_page_response = fetch_following_users(username, 1, per_page, auth_token)
+    # rubocop:disable Metrics/AbcSize
+    def fetch_each_following_users_pages(username, per_page, auth_token = nil, num_threads = THREADS_NUMBER)
+      pool = Thread.pool(num_threads)
+      first_page_response = get_following_page(username, 1, per_page, auth_token)
 
+      # Parse 'Link:' header from Github response and obtain the last page
+      # to iterate and download each one from the first to last page
       link_header = first_page_response['Link']
       links = link_header.split(', ')
       last_page = ((links.last || '').match(/\bpage=(\d+)\b/)[1] || 1).to_i
 
-      pool = thread_pool(THREADS_NUMBER)
-
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
-          yield [page, index, last_page]
+          begin
+            result = fetch_following_page(username, page, per_page, auth_token)
 
-          get_following_user_data(username, page, per_page, auth_token)
+            yield [nil, result, index, last_page] if block_given?
+          rescue => error
+            yield [error, nil, index, last_page] if block_given?
+          end
         end
       end
 
       pool.shutdown
-
-      return true
     end
+    # rubocop:enable Metrics/AbcSize
 
-    def fetch_user(endpoint, auth_token = nil)
-      get(endpoint, github_http_headers(auth_token))
-    end
+    # Gihutb User related
 
-    def get_user_data(username, endpoint, auth_token = nil)
+    def fetch_user_data(username, endpoint, auth_token = nil)
       filename = File.join('github_users', "#{username}.json")
 
-      return get_json_file_data(filename) if has_cached_data?(filename)
+      return get_json_file_data(filename) if data_in_cache?(filename)
 
-      response = fetch_user(endpoint, auth_token)
-      body = JSON.parse(response.body)
+      body = get_github_data(endpoint, auth_token)
 
       save_file(filename, body)
 
-      return body
+      body
+    end
+
+    def fetch_each_user_data(users_list, auth_token = nil, num_threads = THREADS_NUMBER)
+      pool = Thread.pool(num_threads)
+
+      users_list.each_with_index do |user, index|
+        pool.process do
+          begin
+            user_data = fetch_user_data(user['login'], user['url'], auth_token)
+
+            yield [nil, user_data, index, users_list.size] if block_given?
+          rescue => error
+            yield [error, nil, index, users_list.size] if block_given?
+          end
+        end
+      end
+
+      pool.shutdown
+    end
+
+    # Generic Blog Pages related stuff
+
+    def fetch_blog_page(url, dest_dir = BLOG_PAGES_DEST_DIRNAME, retries = 1)
+      filename = File.join(dest_dir, "#{normalize_filename(url)}.html")
+
+      return get_file_data(filename) if file_exists?(filename)
+
+      begin
+        page_url = normalize_uri(url)
+        response = get(page_url).body
+
+        save_file(filename, response, false)
+
+        response
+      rescue => error
+        # Try again
+        return fetch_blog_page(url, dest_dir, retries - 1) if retries > 0
+
+        raise error
+      end
+    end
+
+    def fetch_each_blog_page(blogs_urls, dest_dir = BLOG_PAGES_DEST_DIRNAME, num_threads = THREADS_NUMBER, max_retries = 1)
+      pool = Thread.pool(num_threads)
+      total = blogs_urls.size
+
+      blogs_urls.each_with_index do |url, index|
+        pool.process do
+          begin
+            result = fetch_blog_page(url, dest_dir, max_retries)
+
+            yield [nil, result, index, total, url] if block_given?
+          rescue => error
+            yield [error, nil, index, total, url] if block_given?
+          end
+        end
+      end
+
+      pool.shutdown
     end
 
     def extract_rss_from_blog_page(page)
@@ -94,80 +170,16 @@ module GitFeed
       TruffleHog.parse_feed_urls(page_content).flatten
     end
 
-    def extract_rss_from_blog_pages(blogs_urls)
-      blogs_urls.flat_map.each_with_index do |page, index|
+    def extract_each_rss_from_blog_pages(blogs_pages)
+      blogs_pages.flat_map.each_with_index do |page, index|
         begin
-          yield [page, index, blogs_urls.size]
+          result = extract_rss_from_blog_page(page)
 
-          extract_rss_from_blog_page(page)
-        rescue => e
-          puts if log_errors? # new line
-
-          error "Something went wrong while reading the file \"#{page}\". Skipping..."
-          error "Message: #{e.message}"
+          yield [nil, result, index, blogs_pages.size, page] if block_given?
+        rescue => error
+          yield [error, nil, index, blogs_pages.size, page] if block_given?
         end
       end.compact
-    end
-
-    def fetch_each_following_user(following_list, auth_token = nil, num_threads = THREADS_NUMBER)
-      pool = thread_pool(num_threads)
-
-      following_list.each_with_index do |user, index|
-        pool.process do
-          yield [user, index, following_list.size]
-
-          begin
-            get_user_data(user['login'], user['url'], auth_token)
-          rescue => e
-            puts if log_errors? # new line
-
-            error "Error downloading \"#{user}\" data on Github API"
-            error e.message
-          end
-        end
-      end
-
-      pool.shutdown
-
-      return true
-    end
-
-    def fetch_each_blog_page(blogs_list, num_threads = THREADS_NUMBER, dest_dir = BLOG_PAGES_DEST_DIRNAME, retries = 3)
-      pool = thread_pool(num_threads)
-
-      blogs_list.each_with_index do |url, index|
-        pool.process do
-          yield [url, index, blogs_list.size]
-
-          fetch_blog_page(url, dest_dir)
-        end
-      end
-
-      pool.shutdown
-
-      return true
-    end
-
-    def fetch_blog_page(url, dest_dir = BLOG_PAGES_DEST_DIRNAME, retries = 1)
-      filename = File.join(dest_dir, "#{normalize_filename(url)}.html")
-
-      return nil if file_exists?(filename)
-
-      begin
-        page_url = normalize_uri(url)
-        save_file(filename, get(page_url).body, false)
-      rescue => e
-        puts if log_errors?
-
-        error "[Retry: {#{retries}}] Error in #{url} | #{e.message}"
-
-        # Save the file with no content to avoid hiting this same URL if
-        # the error persisted between all retries attemps
-        save_file(filename, e.message, false) if retries.zero?
-
-        # Try again
-        fetch_blog_page(url, dest_dir, retries - 1) if retries > 0
-      end
     end
   end
 end

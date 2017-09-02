@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Some monkey patch to add colorized output in console
 class String
   COLORS_CODE = {
