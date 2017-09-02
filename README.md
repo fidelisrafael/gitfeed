@@ -20,6 +20,8 @@ $ git clone git@github.com:fidelisrafael/gitfeed.git
 
 **2 - Install ruby gems dependencies:**
 
+*Only `pry` for debug and `ruby-thread` for multi threading*
+
 ```
 $ bundle install
 ```
@@ -52,6 +54,12 @@ To **suppress** error messages logging(such caused by network error), run as:
 
 ```
 $ LOG_ERRORS=false bin/gitfeed fidelisrafael
+```
+
+Or to run in **silent mode**(without logging), run as:
+
+```
+$ VERBOSE=false bin/gitfeed fidelisrafael
 ```
 
 ---
