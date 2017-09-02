@@ -3,6 +3,7 @@
 # rubocop:disable Metrics/LineLength
 # rubocop:disable Style/FormatStringToken
 # rubocop:disable Style/FormatString
+# rubocop:disable Style/ModuleLength
 # rubocop:disable Style/MethodLength
 
 # Core dependencies
@@ -99,6 +100,7 @@ module GitFeed
       body
     end
 
+    # rubocop:disable Metrics/AbcSize
     def fetch_each_user_data(users_list, auth_user = nil, auth_token = nil, options = {})
       pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
 
@@ -106,6 +108,8 @@ module GitFeed
         pool.process do
           begin
             user_data = fetch_user_data(user['login'], user['url'], auth_user, auth_token, options)
+
+            raise user_data['message'] if user_data['message']
 
             yield [nil, user_data, index, users_list.size, user] if block_given?
           rescue => error
@@ -116,6 +120,7 @@ module GitFeed
 
       pool.shutdown
     end
+    # rubocop:enable Metrics/AbcSize
 
     def save_user_data?(username, user_data)
       return false if (username.nil? || username.empty?) || (user_data.nil? || user_data.empty?)

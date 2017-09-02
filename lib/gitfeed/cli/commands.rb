@@ -55,7 +55,7 @@ module GitFeed
               puts if log_errors? # new line
 
               error "Error downloading username \"#{user['login']}\" data on Github API"
-              error error.message
+              error "Message: #{error.message}"
             end
           end
 
