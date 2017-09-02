@@ -48,12 +48,11 @@ module GitFeed
         users = fetch_each_user_data(following_users, auth_token)
 
         # With all users followed by `username` downloaded we can obtain their blog url
-        blogs_urls = users.map { |user| user['blog'] }.reject(&:empty?)
+        blogs_urls = users.map { |user| user['blog'] }.compact.reject(&:empty?)
         save_file(blogs_list_filename, blogs_urls)
 
         # Now, we concurrently download each given URL in `blogs_urls` array
         fetch_each_blog_page(blogs_urls)
-        puts # new line
 
         blogs_page = Dir.glob(File.join(blogs_page_dir, '*.html'))
 

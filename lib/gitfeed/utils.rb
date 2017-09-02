@@ -71,7 +71,7 @@ module GitFeed
     end
 
     def github_http_headers(auth_token)
-      auth_token.nil? ? {} : { 'Authorization' => "bearer #{auth_token}" }
+      (auth_token.nil? || auth_token.empty? ? {} : { 'Authorization' => "bearer #{auth_token}" })
     end
 
     def current_api_key_token_for_github
@@ -133,6 +133,16 @@ module GitFeed
     # Removes any non-word character
     def normalize_filename(filename)
       filename.to_s.gsub(/\W+/, '-').downcase
+    end
+
+    # Parse 'Link:' header from Github response and obtain the last page
+    # to iterate and download each one from the first to last page
+    def last_page_from_link_header(link_response)
+      return 0 if link_response.nil? || link_response.empty?
+
+      links = link_response.split(', ')
+
+      ((links.last || '').match(/\bpage=(\d+)\b/)[1] || 1).to_i
     end
   end
 end

@@ -85,6 +85,8 @@ module GitFeed
               error "Error fetching url \"#{blog_url}\" | #{error.message}"
             end
           end
+
+          puts
         end
       end
 

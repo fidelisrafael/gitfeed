@@ -61,17 +61,13 @@ module GitFeed
       body
     end
 
-    # rubocop:disable Metrics/AbcSize
     def fetch_each_following_users_pages(username, per_page, auth_token = nil, num_threads = THREADS_NUMBER)
       pool = Thread.pool(num_threads)
       first_page_response = get_following_page(username, 1, per_page, auth_token)
 
-      # Parse 'Link:' header from Github response and obtain the last page
-      # to iterate and download each one from the first to last page
-      # TODO: Move to separated method?
-      link_header = first_page_response['Link']
-      links = link_header.split(', ')
-      last_page = ((links.last || '').match(/\bpage=(\d+)\b/)[1] || 1).to_i
+      return nil if first_page_response.is_a?(Net::HTTPForbidden) # Rate Limit Error
+
+      last_page = last_page_from_link_header(first_page_response['Link'])
 
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
@@ -87,7 +83,6 @@ module GitFeed
 
       pool.shutdown
     end
-    # rubocop:enable Metrics/AbcSize
 
     # Gihutb User related
 
