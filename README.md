@@ -15,7 +15,7 @@ This is the first part of application, you may want to check the HTTP API and th
 **1 - Clone this repository:**
 
 ```
-$ git clone git@bitbucket.org:fidelisrafael/gitfeed-backend.git
+$ git clone git@github.com:fidelisrafael/gitfeed.git
 ```
 
 **2 - Install ruby gems dependencies:**
