@@ -3,7 +3,6 @@
 # rubocop:disable Metrics/LineLength
 # rubocop:disable Style/FormatStringToken
 # rubocop:disable Style/FormatString
-# rubocop:disable Style/ModuleLength
 # rubocop:disable Style/MethodLength
 
 # Core dependencies

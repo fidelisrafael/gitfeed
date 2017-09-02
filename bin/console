@@ -7,18 +7,18 @@ Bundler.require(:default)
 require_relative '../lib/gitfeed/api'
 
 def basic_prompt(target_self, nest_level, pry)
-  nesting = nest_level.zero? ? "" : ":#{nest_level}"
+  nesting = nest_level.zero? ? '' : ":#{nest_level}"
 
   "[#{pry.input_array.size}](#{Pry.view_clip(target_self)})#{nesting}"
 end
 
 Pry.prompt = [
   proc do |target_self, nest_level, pry|
-    basic_prompt(target_self, nest_level, pry) + "> "
+    basic_prompt(target_self, nest_level, pry) + '> '
   end,
 
   proc do |target_self, nest_level, pry|
-    basic_prompt(target_self, nest_level, pry) + "* "
+    basic_prompt(target_self, nest_level, pry) + '* '
   end
 ]
 

@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
+# rubocop:disable Metrics/MethodLength
+
 # source: https://github.com/pauldix/truffle-hog/blob/master/lib/truffle-hog.rb
 module TruffleHog
-  VERSION = "0.0.3"
+  VERSION = '0.0.3'.freeze
 
   def self.parse_feed_urls(html, favor = :all)
-    rss_links  = scan_for_tag(html, "rss")
-    atom_links = scan_for_tag(html, "atom")
+    rss_links  = scan_for_tag(html, 'rss')
+    atom_links = scan_for_tag(html, 'atom')
 
     case favor
     when :all
@@ -19,28 +21,28 @@ module TruffleHog
   end
 
   def self.scan_for_tag(html, type)
-    urls(html, "link", type) + urls(html, "a", type)
+    urls(html, 'link', type) + urls(html, 'a', type)
   end
 
   def self.urls(html, tag, type)
     tags = html.scan(/(<#{tag}.*?>)/).flatten
     feed_tags = collect(tags, type)
-    feed_tags.map do |tag|
-      matches = tag.match(/.*href=['"](.*?)['"].*/)
-      if matches.nil?
-        url = ""
-      else
-        url = matches[1]
-      end
+    feed_tags.map do |inner_tag|
+      matches = inner_tag.match(/.*href=['"](.*?)['"].*/)
+      url = if matches.nil?
+              ''
+            else
+              matches[1]
+            end
       url =~ /^http.*/ ? url : nil
     end.compact
   end
 
   def self.collect(tags, type)
-    tags.collect {|t| t if feed?(t, type)}.compact
+    tags.collect { |t| t if feed?(t, type) }.compact
   end
 
   def self.feed?(html, type)
-    html =~ /.*type=['"]application\/#{type}\+xml['"].*/
+    html =~ %r{/.*type=['"]application\/#{type}\+xml['"].*/}
   end
 end
