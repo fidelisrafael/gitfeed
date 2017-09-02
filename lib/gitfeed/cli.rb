@@ -38,7 +38,11 @@ module GitFeed
 
         # Download all following users pages to be iterate in next step
         # (or just skip if is already in file system)
-        API.fetch_all_following_users_pages(username, options[:per_page], auth_token)
+        API.fetch_all_following_users_pages(username, options[:per_page], auth_token) do |_, current, total|
+          print_counter current.next, total
+        end
+
+        puts
 
         following_pages = File.join(Utils::DATA_DIRECTORY, username, 'following_pages', '*')
         following_users = parse_json_directory(following_pages)
@@ -50,15 +54,19 @@ module GitFeed
       return following_users
     end
 
-    def fetch_each_following_user(username, following_users_pages, auth_token, options = {})
+    def fetch_each_following_user(username, users_pages, auth_token, _options = {})
       users = []
 
       section 'Download users pages' do
         info "Downloading the list of users which #{format_username(username)} follows. This can take a while..."
 
-        API.fetch_each_following_user(following_users_pages, auth_token)
+        API.fetch_each_following_user(users_pages, auth_token) do |_, current, total|
+          print_counter current.next, total
+        end
 
-        users = following_users_pages.flat_map do |user|
+        puts
+
+        users = users_pages.flat_map do |user|
           get_json_file_data(File.join('github_users', "#{user['login']}.json"))
         end.compact
 
@@ -80,9 +88,13 @@ module GitFeed
         info "[OK] File generated. See #{filename.underline}\n\n"
 
         info "Now, we will download the main page of each blog url found in #{format_username(username)} following users"
-        info "This can take a few minutes..."
+        info 'This can take a few minutes...'
 
-        API.fetch_each_blog_page(blogs_urls, options[:sites_threads_number])
+        API.fetch_each_blog_page(blogs_urls, options[:sites_threads_number]) do |_, current, total|
+          print_counter current.next, total
+        end
+
+        puts
       end
     end
 
@@ -91,7 +103,11 @@ module GitFeed
         info "Starting RSS Feed URL search for each url..."
 
         all_blogs_page = Dir.glob(File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME, '*'))
-        blogs_feeds = API.extract_rss_from_blog_pages(all_blogs_page)
+        blogs_feeds = API.extract_rss_from_blog_pages(all_blogs_page) do |_, current, total|
+          print_counter current.next, total
+        end
+
+        puts
 
         save_file(filename, blogs_feeds.flatten)
 

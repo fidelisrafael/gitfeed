@@ -58,7 +58,7 @@ module GitFeed
 
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
-          print_counter index.next, last_page
+          yield [page, index, last_page]
 
           get_following_user_data(username, page, per_page, auth_token)
         end
@@ -97,7 +97,7 @@ module GitFeed
     def extract_rss_from_blog_pages(blogs_urls)
       blogs_urls.flat_map.each_with_index do |page, index|
         begin
-          print_counter index.next, blogs_urls.size
+          yield [page, index, blogs_urls.size]
 
           extract_rss_from_blog_page(page)
         rescue => e
@@ -114,18 +114,17 @@ module GitFeed
 
       following_list.each_with_index do |user, index|
         pool.process do
-          print_counter index.next, following_list.size
-
-          get_user_data(user['login'], user['url'], auth_token)
+          yield [user, index, following_list.size]
 
           begin
-          rescue Exception => e
+            get_user_data(user['login'], user['url'], auth_token)
+          rescue => e
             puts if log_errors? # new line
 
             error "Error downloading \"#{user}\" data on Github API"
             error e.message
           end
-       end
+        end
       end
 
       pool.shutdown
@@ -138,7 +137,7 @@ module GitFeed
 
       blogs_list.each_with_index do |url, index|
         pool.process do
-          print_counter index.next, blogs_list.size
+          yield [url, index, blogs_list.size]
 
           fetch_blog_page(url, dest_dir)
         end
@@ -156,11 +155,8 @@ module GitFeed
 
       begin
         page_url = normalize_uri(url)
-
-        page_html = get(page_url).body
-        save_file(filename, page_html, false)
-
-      rescue Exception => e
+        save_file(filename, get(page_url).body, false)
+      rescue => e
         puts if log_errors?
 
         error "[Retry: {#{retries}}] Error in #{url} | #{e.message}"

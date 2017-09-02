@@ -9,10 +9,9 @@ require 'openssl'
 require 'timeout'
 
 module GitFeed
-  # Module with helpers methods to download all lyrics
+  # Module with helpers methods
   module Utils
     HTTP_REQUES_TIMEOUT = 15 # 15 seconds
-
     ROOT_DIR = File.expand_path('../..', File.dirname(__FILE__))
     DATA_DIRECTORY = File.join(ROOT_DIR, 'data')
 
@@ -20,30 +19,32 @@ module GitFeed
 
     def get(url, headers = {}, timeout = HTTP_REQUES_TIMEOUT)
       ::Timeout::timeout(timeout) do
-        begin
-          uri = URI(normalize_uri(url))
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = url.start_with?('https')
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-          request = Net::HTTP::Get.new(uri.request_uri, headers)
-
-          response = http.request(request)
-
-          if response['Location']
-            new_url = URI(response['Location'])
-
-            # Handle the case when server replies with "Location" header as relative path, eg:
-            # Location: /blog
-            if new_url.host.nil?
-              new_url = "#{new_url.scheme || uri.scheme}://#{uri.host}/#{new_url}"
-            end
-
-            return get(new_url.to_s, headers, timeout)
-          end
-
-          response
-        end
+        get_request(url, headers)
       end
+    end
+
+    def get_request(url, headers)
+      uri = URI(normalize_uri(url))
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = url.start_with?('https')
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+      request = Net::HTTP::Get.new(uri.request_uri, headers)
+      response = http.request(request)
+
+      if response['Location']
+        new_url = URI(response['Location'])
+
+        # Handle the case when server replies with "Location" header as relative path, eg:
+        # Location: /blog
+        if new_url.host.nil?
+          new_url = "#{new_url.scheme || uri.scheme}://#{uri.host}/#{new_url}"
+        end
+
+        return get_request(new_url.to_s, headers)
+      end
+
+      response
     end
 
     def current_api_key_token_for_github
@@ -59,7 +60,7 @@ module GitFeed
     end
 
     def github_http_headers(auth_token)
-      auth_token.nil? ? {} : { "Authorization" => "bearer #{auth_token}" }
+      auth_token.nil? ? {} : { 'Authorization' => "bearer #{auth_token}" }
     end
 
     def has_cached_data?(filename, min_bytes_size = 1000)
