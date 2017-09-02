@@ -3,11 +3,12 @@
 # rubocop:disable Metrics/LineLength
 
 # Standard lib dependencies
+require 'base64'
+require 'fileutils'
+require 'json'
 require 'net/http'
 require 'openssl'
 require 'timeout'
-require 'json'
-require 'fileutils'
 
 module GitFeed
   # This module contains all helpers methods to deal with HTTP requests and
@@ -70,18 +71,28 @@ module GitFeed
       response
     end
 
-    def github_http_headers(auth_token)
-      (auth_token.nil? || auth_token.empty? ? {} : { 'Authorization' => "bearer #{auth_token}" })
+    def github_http_headers(auth_user = nil, auth_token = nil)
+      return {} if auth_token.nil? || auth_token.empty?
+
+      { 'Authorization' => "Basic #{Base64.strict_encode64("#{auth_user}:#{auth_token}")}" }
     end
 
-    def current_api_key_token_for_github
-      file = File.join(ROOT_DIR, '.github-api-key')
+    def github_config
+      file = File.join(ROOT_DIR, '.github-config')
 
-      File.exist?(file) ? File.read(file).chop : ''
+      File.exist?(file) ? JSON.parse(File.read(file)) : {}
     end
 
-    def get_github_data(url, auth_token = nil)
-      response = get(url, github_http_headers(auth_token)).body
+    def github_config_api_token
+      github_config['token']
+    end
+
+    def github_config_api_user
+      github_config['username']
+    end
+
+    def get_github_data(url, auth_user = nil, auth_token = nil)
+      response = get(url, github_http_headers(auth_user, auth_token)).body
 
       JSON.parse(response)
     end
@@ -90,8 +101,8 @@ module GitFeed
       File.exist?(File.join(DATA_DIRECTORY, filename))
     end
 
-    def data_in_cache?(filename, min_bytes_size = 1000)
-      return false if ENV['FORCE_REFRESH'] == 'true'
+    def data_in_cache?(filename, force_refresh = false, min_bytes_size = 1000)
+      return false if force_refresh
 
       file_exists?(filename) && File.size(File.join(DATA_DIRECTORY, filename)) > min_bytes_size
     end

@@ -32,10 +32,15 @@ $ bundle install
 
 Now you will need a API Key token to fetch user data from Github API with increased Rate Limit.
 Issue a new API token from [Github Interface](https://github.com/settings/tokens).
-After issuing the token, generates a new file in root directory with name `.github-api-key` and add the token code there, eg:
+After issuing the token, generates a new file in root directory with name `.github-config` and add **YOUR** username and personal token there, eg:
 
 ```
-$ echo 'MY_GITHUB_TOKEN' > .github-api-key
+$ echo '"{\"username\":\"YOUR_USERNAME\",\"token\":\"YOUR_TOKEN\"}"' > .github-config
+$ cat .github-config
+{
+  "username": "fidelisrafael",
+  "token": "(....)"
+}
 ```
 
 **4 - Run this thing!:**

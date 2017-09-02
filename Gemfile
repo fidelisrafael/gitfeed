@@ -1,4 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'thread'
 gem 'pry'
+gem 'puma'
+gem 'rack'
+gem 'thread'
