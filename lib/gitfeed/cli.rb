@@ -26,15 +26,15 @@ module GitFeed
     module_function
 
     def run!(username, verbose = true, force_refresh = false, per_page = 100)
+      unless username
+        error "You must supply the username as second parameter. Eg: `#{$PROGRAM_NAME} fidelisrafael`", true
+        return
+      end
+
       @verbose = verbose
       options = prepare_options(username, force_refresh)
 
       section 'GitFeed' do
-        unless username
-          error("You must supply the username as second parameter. Eg: `#{$PROGRAM_NAME} fidelisrafael`")
-          exit
-        end
-
         start!(username, per_page, github_config_api_user, github_config_api_token, options)
       end
     end

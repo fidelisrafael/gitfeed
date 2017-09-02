@@ -56,8 +56,8 @@ module GitFeed
         ENV['LOG_ERRORS'].nil? || ENV['LOG_ERRORS'] == 'true'
       end
 
-      def error(message)
-        return nil unless log_errors?
+      def error(message, force = false)
+        return nil if !log_errors? && !force
 
         puts "[ERROR] #{message}".bold.colorize(:red)
       end
