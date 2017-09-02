@@ -28,6 +28,7 @@ module GitFeed
 
     def run!(username, verbose = true, force_refresh = false, per_page = 100)
       @verbose = verbose
+      options = { force_refresh: force_refresh }
 
       section 'GitFeed' do
         unless username
@@ -37,15 +38,17 @@ module GitFeed
 
         # Variables
         auth_token = current_api_key_token_for_github
+        auth_user = current_api_key_username_for_github
+
         blogs_list_filename = File.join(username, 'following_users_blogs.json')
         blogs_rss_feeds_filename = File.join(username, 'rss_feeds.json')
         blogs_page_dir = File.join(Utils::DATA_DIRECTORY, API::BLOG_PAGES_DEST_DIRNAME)
 
         # Real stuff happening
         # Frist step: Download all following pages of given username
-        following_users = fetch_each_following_users_pages(username, per_page, auth_token, force_refresh)
+        following_users = fetch_each_following_users_pages(username, per_page, auth_user, auth_token, options)
         # After download all users of each page download above
-        users = fetch_each_user_data(following_users, auth_token, force_refresh)
+        users = fetch_each_user_data(following_users, auth_user, auth_token, options)
 
         # With all users followed by `username` downloaded we can obtain their blog url
         blogs_urls = users.map { |user| user['blog'] }.compact.reject(&:empty?)

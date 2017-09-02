@@ -30,7 +30,7 @@ module GitFeed
 
     # Configuration constants
     # Number of default threads when performing concurrently tasks
-    THREADS_NUMBER = 20
+    THREADS_NUMBER = 10
     # Github base api URL(scheme + host)
     GITHUB_API_URL = 'https://api.github.com'.freeze
     # Endoint to obtain following users in Github
@@ -41,28 +41,30 @@ module GitFeed
     module_function
 
     # Github Following Pages stuff
-    def get_following_page(username, page, per_page, auth_token = nil)
+    def get_following_page(username, page, per_page, auth_user = nil, auth_token = nil)
       endpoint = GITHUB_FOLLOWING_USERS_ENDPOINT % { username: username, page: page, per_page: per_page }
 
-      get(endpoint, github_http_headers(auth_token))
+      get(endpoint, github_http_headers(auth_user, auth_token))
     end
 
-    def fetch_following_page(username, page, per_page, auth_token = nil, force_refresh = false)
+    # rubocop:disable Metrics/ParameterLists
+    def fetch_following_page(username, page, per_page, auth_user = nil, auth_token = nil, options = {})
       filename = File.join(username, 'following_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
 
-      return get_json_file_data(filename) if data_in_cache?(filename, force_refresh)
+      return get_json_file_data(filename) if data_in_cache?(filename, options[:force_refresh])
 
-      response = get_following_page(username, page, per_page, auth_token)
+      response = get_following_page(username, page, per_page, auth_user, auth_token)
       body = JSON.parse(response.body)
 
       save_file(filename, body)
 
       body
     end
+    # rubocop:enable Metrics/ParameterLists
 
-    def fetch_each_following_users_pages(username, per_page, auth_token = nil, force_refresh = false, num_threads = THREADS_NUMBER)
-      pool = Thread.pool(num_threads)
-      first_page_response = get_following_page(username, 1, per_page, auth_token)
+    def fetch_each_following_users_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
+      pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
+      first_page_response = get_following_page(username, 1, per_page, auth_user, auth_token)
 
       return nil if first_page_response.is_a?(Net::HTTPForbidden) # Rate Limit Error
 
@@ -71,7 +73,7 @@ module GitFeed
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
           begin
-            result = fetch_following_page(username, page, per_page, auth_token, force_refresh)
+            result = fetch_following_page(username, page, per_page, auth_user, auth_token, options)
 
             yield [nil, result, index, last_page] if block_given?
           rescue => error
@@ -85,29 +87,29 @@ module GitFeed
 
     # Gihutb User related
 
-    def fetch_user_data(username, endpoint, auth_token = nil, force_refresh = false)
+    def fetch_user_data(username, endpoint, auth_user = nil, auth_token = nil, options = {})
       filename = File.join('github_users', "#{username}.json")
 
-      return get_json_file_data(filename) if data_in_cache?(filename, force_refresh)
+      return get_json_file_data(filename) if data_in_cache?(filename, options[:force_refresh])
 
-      body = get_github_data(endpoint, auth_token)
+      body = get_github_data(endpoint, auth_user, auth_token)
 
       save_file(filename, body)
 
       body
     end
 
-    def fetch_each_user_data(users_list, auth_token = nil, force_refresh = false, num_threads = THREADS_NUMBER)
-      pool = Thread.pool(num_threads)
+    def fetch_each_user_data(users_list, auth_user = nil, auth_token = nil, options = {})
+      pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
 
       users_list.each_with_index do |user, index|
         pool.process do
           begin
-            user_data = fetch_user_data(user['login'], user['url'], auth_token, force_refresh)
+            user_data = fetch_user_data(user['login'], user['url'], auth_user, auth_token, options)
 
-            yield [nil, user_data, index, users_list.size] if block_given?
+            yield [nil, user_data, index, users_list.size, user] if block_given?
           rescue => error
-            yield [error, nil, index, users_list.size] if block_given?
+            yield [error, nil, index, users_list.size, user] if block_given?
           end
         end
       end
