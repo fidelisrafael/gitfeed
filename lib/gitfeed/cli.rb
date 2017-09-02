@@ -54,11 +54,14 @@ module GitFeed
         # Now, we concurrently download each given URL in `blogs_urls` array
         fetch_each_blog_page(blogs_urls)
 
-        blogs_page = Dir.glob(File.join(blogs_page_dir, '*.html'))
+        keep_blogs_urls = blogs_urls.map(&method(:normalize_filename))
+        blogs_pages = Dir.glob(File.join(blogs_page_dir, '*.html')).select do |page|
+          keep_blogs_urls.member?(File.basename(page).sub(File.extname(page), ''))
+        end
 
         # And finally: Generates a JSON file with all found RSS and Atom feeds in
         # all urls found in users that `username` follows in Github.
-        generate_rss_feed_json(blogs_page, blogs_rss_feeds_filename)
+        generate_rss_feed_json(blogs_pages, blogs_rss_feeds_filename)
       end
     end
   end

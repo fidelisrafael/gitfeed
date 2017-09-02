@@ -87,6 +87,7 @@ module GitFeed
           end
 
           puts
+          info "[OK] Blog pages downloaded. Total #{blogs_urls.size.to_s.underline.bold}"
         end
       end
 
