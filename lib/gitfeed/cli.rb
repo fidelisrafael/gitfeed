@@ -63,6 +63,10 @@ module GitFeed
       # And finally: Generates a JSON file with all found RSS and Atom feeds in
       # all urls found in users that `username` follows in Github.
       generate_rss_feed_json(blogs_pages, options[:blogs_rss_feeds_filename])
+
+      # After finally, let's import in Feedly for testing
+      feedly_api_key = File.read(File.join(Utils::ROOT_DIR, '.feedly-api-key'))
+      register_rss_in_feedly_api(options[:blogs_rss_feeds_filename], feedly_api_key)
     end
 
     def prepare_options(username, force_refresh)

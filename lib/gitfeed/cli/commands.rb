@@ -7,6 +7,9 @@
 
 module GitFeed
   module CLI
+    # Base feedly collection name
+    FEEDLY_COLLECTION_NAME = 'GitFeed.io'.freeze
+
     # This module basically contains all commands on top of `GitFeed::API` with error
     # handling and formatted output when the verbose mode is activated.
     module Commands
@@ -121,6 +124,38 @@ module GitFeed
 
           info "[OK] Saved. Extracted a total of #{total_found.to_s.underline.colorize(:yellow)} RSS feed links from #{total_scanned.to_s.underline.colorize(:pink)} pages"
           info "This mean that the percentage of success was: #{"#{percent_success}%".to_s.underline.bold.colorize(:green)}"
+        end
+      end
+
+      def register_rss_in_feedly_api(feed_filename, auth_token)
+        section 'Feedly Import' do
+          pool = Thread.pool(5)
+          username = File.dirname(feed_filename)
+          client = Feedlr::Client.new(oauth_access_token: auth_token)
+          feeds = get_json_file_data(feed_filename).map { |f| "feed/#{f}" }
+
+          feeds.each_with_index do |feed, index|
+            pool.process do
+              print_counter index.next, feeds.size
+
+              feed_data = {
+                id: feed,
+                categories: [
+                  { label: "#{FEEDLY_COLLECTION_NAME}:#{username}" }
+                ]
+              }
+
+              begin
+                client.add_subscription(feed_data)
+              rescue => e
+                error e.message
+              end
+            end
+          end
+
+          puts
+
+          pool.shutdown
         end
       end
 
