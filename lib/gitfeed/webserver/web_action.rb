@@ -12,12 +12,9 @@ module GitFeed
   module WebServer
     class WebAction
       RACK_SESSION = 'rack.session'.freeze
+      VIEWS_FOLDER = 'views'.freeze
 
       attr_accessor :env, :block, :type
-
-      def settings
-        Web.settings
-      end
 
       def request
         @request ||= ::Rack::Request.new(env)
@@ -51,7 +48,7 @@ module GitFeed
       def erb(content, options = {})
         if content.kind_of? Symbol
           unless respond_to?(:"_erb_#{content}")
-            src = ERB.new(File.read("#{Web.settings.views}/#{content}.erb")).src
+            src = ERB.new(File.read("#{VIEWS_FOLDER}/#{content}.erb")).src
             WebAction.class_eval("def _erb_#{content}\n#{src}\n end")
           end
         end
