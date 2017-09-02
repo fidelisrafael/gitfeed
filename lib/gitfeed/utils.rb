@@ -105,14 +105,18 @@ module GitFeed
       (uri =~ /^(https?|ftp|file):/) ? uri : "http://#{uri}"
     end
 
+    def format_username(username)
+      username.bold.underline.colorize(:blue)
+    end
+
     def normalize_filename(filename)
       filename.to_s.gsub(/(\/|\.|:)/, '-').downcase
     end
 
-    def print_counter(current, total)
+    def print_counter(current, total, color = :light_blue)
       return nil unless verbose?
 
-      print "\r[COUNTER] #{current}/#{total}".colorize(:yellow)
+      print "\r[COUNTER] #{current}/#{total}".bold.colorize(color)
     end
 
     def with_execution_time(&block)
@@ -126,20 +130,18 @@ module GitFeed
       character.to_s * width
     end
 
-    def section(section_name, synchronize = false, message_color = :blue, &block)
+    def section(section_name, message_color = :green, synchronize = false, &block)
       return _section(section_name, message_color, &block) unless synchronize
 
       MUTEX.synchronize { _section(section_name, message_color, &block) }
     end
 
-    def _section(section_name, message_color = :blue, &block)
+    def _section(section_name, message_color = :green, &block)
       puts # new line
       puts line_marker.colorize(message_color).bold
       info "[START] #{section_name}".colorize(message_color).bold
 
       exec_time = with_execution_time(&block)
-
-      puts # new line
 
       info "[END] Executed #{section_name} in #{exec_time.round(2)} ms".colorize(message_color).bold
       puts line_marker.colorize(message_color).bold

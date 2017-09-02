@@ -26,15 +26,29 @@ module GitFeed
       end
     end
 
-    def format_username(username)
-      username.bold.underline.colorize(:green)
+    def _run!(username, options)
+      username || raise("You must supply the username as second parameter. Eg: `#{$0} fidelisrafael`")
+
+      # Variables
+      options = DEFAULT_OPTIONS.merge(options)
+      auth_token = current_api_key_token_for_github
+      blogs_list_filename = File.join(username, 'following_users_blogs.json')
+      blogs_rss_feeds_filename = File.join(username, 'rss_feeds.json')
+
+      # Real stuff happening
+      following_users = fetch_all_following_users_pages(username, auth_token, options)
+      users = fetch_each_following_user(username, following_users, auth_token, options)
+
+      fetch_each_blog_page(username, blogs_list_filename, users, options)
+      generate_filtered_rss_blogs(username, blogs_rss_feeds_filename, options)
     end
+
 
     def fetch_all_following_users_pages(username, auth_token, options = {})
       following_users = []
 
       section 'Download following users pages' do
-        info "Ok, lets start grabbing all pages of following users for #{format_username(username)}\n\n"
+        info "Ok, lets start grabbing all pages of following users for #{format_username(username)}\n"
 
         # Download all following users pages to be iterate in next step
         # (or just skip if is already in file system)
@@ -70,7 +84,7 @@ module GitFeed
           get_json_file_data(File.join('github_users', "#{user['login']}.json"))
         end.compact
 
-        info "[OK] All users followed by #{format_username(username)} downloaded. Total of #{users.size.to_s.underline} users\n\n"
+        info "[OK] All users followed by #{format_username(username)} downloaded. Total of #{users.size.to_s.underline} users\n"
       end
 
       return users
@@ -118,20 +132,6 @@ module GitFeed
         info "[OK] Saved. Extracted a total of #{total_found.to_s.underline.colorize(:yellow)} RSS feed links from #{total_scanned.to_s.underline.colorize(:pink)} pages"
         info "This mean that the percentage of success was: #{"#{percent_success}%".to_s.underline.bold.colorize(:green)}"
       end
-    end
-
-    def _run!(username, options)
-      username || raise("You must supply the username as second parameter. Eg: `#{$0} fidelisrafael`")
-
-      options = DEFAULT_OPTIONS.merge(options)
-      blogs_list_filename = File.join(username, 'following_users_blogs.json')
-      blogs_rss_feeds_filename = File.join(username, 'rss_feeds.json')
-
-      following_users = fetch_all_following_users_pages(username, current_api_key_token_for_github, options)
-      users = fetch_each_following_user(username, following_users, current_api_key_token_for_github, options)
-
-      fetch_each_blog_page(username, blogs_list_filename, users, options)
-      generate_filtered_rss_blogs(username, blogs_rss_feeds_filename, options)
     end
   end
 end

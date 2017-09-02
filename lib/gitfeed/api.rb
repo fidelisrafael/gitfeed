@@ -163,7 +163,7 @@ module GitFeed
 
         # Save the file with no content to avoid hiting this same URL if
         # the error persisted between all retries attemps
-        # save_file(filename, e.message, false) if retries.zero?
+        save_file(filename, e.message, false) if retries.zero?
 
         # Try again
         fetch_blog_page(url, dest_dir, retries - 1) if retries > 0
