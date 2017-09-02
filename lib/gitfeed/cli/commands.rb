@@ -10,7 +10,7 @@ module GitFeed
     # This module basically contains all commands on top of `GitFeed::API` with error
     # handling and formatted output when the verbose mode is activated.
     module Commands
-      def fetch_each_following_users_pages(username, per_page, auth_token)
+      def fetch_each_following_users_pages(username, per_page, auth_token, force_refresh = false)
         following_users = []
         fusername = format_username(username)
 
@@ -19,7 +19,7 @@ module GitFeed
 
           # Download all following users pages to be iterate in next step
           # (or just skip if is already in file system)
-          API.fetch_each_following_users_pages(username, per_page, auth_token) do |error, _result, current, total|
+          API.fetch_each_following_users_pages(username, per_page, auth_token, force_refresh) do |error, _result, current, total|
             print_counter current.next, total
 
             if error
@@ -42,13 +42,13 @@ module GitFeed
         following_users
       end
 
-      def fetch_each_user_data(following_users, auth_token)
+      def fetch_each_user_data(following_users, auth_token, force_refresh = false)
         users = []
 
         section 'Download users pages' do
           info 'Downloading the list of users. This can take a while...'
 
-          API.fetch_each_user_data(following_users, auth_token) do |error, _user, current, total|
+          API.fetch_each_user_data(following_users, auth_token, force_refresh) do |error, _user, current, total|
             print_counter current.next, total
 
             if error

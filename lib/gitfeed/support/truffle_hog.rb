@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 # rubocop:disable Metrics/MethodLength
+# rubocop:disable Style/RegexpLiteral
 
 # source: https://github.com/pauldix/truffle-hog/blob/master/lib/truffle-hog.rb
 module TruffleHog
@@ -43,6 +44,6 @@ module TruffleHog
   end
 
   def self.feed?(html, type)
-    html =~ %r{/.*type=['"]application\/#{type}\+xml['"].*/}
+    html =~ /.*type=['"]application\/#{type}\+xml['"].*/
   end
 end

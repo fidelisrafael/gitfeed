@@ -26,7 +26,7 @@ module GitFeed
 
     module_function
 
-    def run!(username, verbose = true, per_page = 100)
+    def run!(username, verbose = true, force_refresh = false, per_page = 100)
       @verbose = verbose
 
       section 'GitFeed' do
@@ -43,9 +43,9 @@ module GitFeed
 
         # Real stuff happening
         # Frist step: Download all following pages of given username
-        following_users = fetch_each_following_users_pages(username, per_page, auth_token)
+        following_users = fetch_each_following_users_pages(username, per_page, auth_token, force_refresh)
         # After download all users of each page download above
-        users = fetch_each_user_data(following_users, auth_token)
+        users = fetch_each_user_data(following_users, auth_token, force_refresh)
 
         # With all users followed by `username` downloaded we can obtain their blog url
         blogs_urls = users.map { |user| user['blog'] }.compact.reject(&:empty?)

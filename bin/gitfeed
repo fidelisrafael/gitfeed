@@ -6,8 +6,12 @@ Bundler.require(:default)
 
 require_relative '../lib/gitfeed/cli'
 
+verbose = ENV['VERBOSE'].nil? || ENV['VERBOSE'] == 'true'
+force_refresh = ENV['FORCE_REFRESH'] == 'true'
+per_page = ENV['FETCH_PER_PAGE'] || 100
+
 begin
-  GitFeed::CLI.run!(ARGV[0], ENV['VERBOSE'].nil? || ENV['VERBOSE'] == 'true')
+  GitFeed::CLI.run!(ARGV[0], verbose, force_refresh, per_page)
 rescue Interrupt
   # In case of user manually interrupted the script
   # or exception was raised in code

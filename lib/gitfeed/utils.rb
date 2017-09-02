@@ -90,8 +90,8 @@ module GitFeed
       File.exist?(File.join(DATA_DIRECTORY, filename))
     end
 
-    def data_in_cache?(filename, min_bytes_size = 1000)
-      return false if ENV['FORCE_REFRESH'] == 'true'
+    def data_in_cache?(filename, force_refresh = false, min_bytes_size = 1000)
+      return false if force_refresh
 
       file_exists?(filename) && File.size(File.join(DATA_DIRECTORY, filename)) > min_bytes_size
     end

@@ -47,10 +47,10 @@ module GitFeed
       get(endpoint, github_http_headers(auth_token))
     end
 
-    def fetch_following_page(username, page, per_page, auth_token = nil)
+    def fetch_following_page(username, page, per_page, auth_token = nil, force_refresh = false)
       filename = File.join(username, 'following_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
 
-      return get_json_file_data(filename) if data_in_cache?(filename)
+      return get_json_file_data(filename) if data_in_cache?(filename, force_refresh)
 
       response = get_following_page(username, page, per_page, auth_token)
       body = JSON.parse(response.body)
@@ -60,7 +60,7 @@ module GitFeed
       body
     end
 
-    def fetch_each_following_users_pages(username, per_page, auth_token = nil, num_threads = THREADS_NUMBER)
+    def fetch_each_following_users_pages(username, per_page, auth_token = nil, force_refresh = false, num_threads = THREADS_NUMBER)
       pool = Thread.pool(num_threads)
       first_page_response = get_following_page(username, 1, per_page, auth_token)
 
@@ -71,7 +71,7 @@ module GitFeed
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
           begin
-            result = fetch_following_page(username, page, per_page, auth_token)
+            result = fetch_following_page(username, page, per_page, auth_token, force_refresh)
 
             yield [nil, result, index, last_page] if block_given?
           rescue => error
@@ -85,10 +85,10 @@ module GitFeed
 
     # Gihutb User related
 
-    def fetch_user_data(username, endpoint, auth_token = nil)
+    def fetch_user_data(username, endpoint, auth_token = nil, force_refresh = false)
       filename = File.join('github_users', "#{username}.json")
 
-      return get_json_file_data(filename) if data_in_cache?(filename)
+      return get_json_file_data(filename) if data_in_cache?(filename, force_refresh)
 
       body = get_github_data(endpoint, auth_token)
 
@@ -97,13 +97,13 @@ module GitFeed
       body
     end
 
-    def fetch_each_user_data(users_list, auth_token = nil, num_threads = THREADS_NUMBER)
+    def fetch_each_user_data(users_list, auth_token = nil, force_refresh = false, num_threads = THREADS_NUMBER)
       pool = Thread.pool(num_threads)
 
       users_list.each_with_index do |user, index|
         pool.process do
           begin
-            user_data = fetch_user_data(user['login'], user['url'], auth_token)
+            user_data = fetch_user_data(user['login'], user['url'], auth_token, force_refresh)
 
             yield [nil, user_data, index, users_list.size] if block_given?
           rescue => error

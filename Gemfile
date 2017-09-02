@@ -1,4 +1,5 @@
 source 'https://rubygems.org'
 
-gem 'thread'
 gem 'pry'
+gem 'rack'
+gem 'thread'
