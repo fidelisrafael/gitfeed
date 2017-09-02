@@ -83,11 +83,11 @@ module GitFeed
       File.exist?(file) ? JSON.parse(File.read(file)) : {}
     end
 
-    def current_api_key_token_for_github
+    def github_config_api_token
       github_config['token']
     end
 
-    def current_api_key_username_for_github
+    def github_config_api_user
       github_config['username']
     end
 
