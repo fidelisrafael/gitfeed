@@ -62,6 +62,14 @@ Or to run in **silent mode**(without logging), run as:
 $ VERBOSE=false bin/gitfeed fidelisrafael
 ```
 
+When you run the script for the first time, a lot of HTTP requests are sent to Github API to fetch the needed data to create custom user's RSS feeds. Note that **almost HTTP request is cached in disk in a JSON format file**(this includes HTTP requests sent to download the first page of each blog from followed users).  
+If you want to download the data again when running the script, execute as:  
+
+
+```
+$ FORCE_REFRESH=true bin/gitfeed fidelisrafael
+```
+
 ---
 
 ## How this works?

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Core dependencies
 require_relative 'api'
 require_relative 'utils'
 require_relative 'cli/output_helpers'
@@ -52,6 +53,8 @@ module GitFeed
 
         # Now, we concurrently download each given URL in `blogs_urls` array
         fetch_each_blog_page(blogs_urls)
+        puts # new line
+
         blogs_page = Dir.glob(File.join(blogs_page_dir, '*.html'))
 
         # And finally: Generates a JSON file with all found RSS and Atom feeds in

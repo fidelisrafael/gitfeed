@@ -6,13 +6,11 @@
 # rubocop:disable Style/ModuleLength
 # rubocop:disable Style/MethodLength
 
-# Core dependencie
+# Core dependencies
 require_relative 'utils'
 
 # Standard lib dependencies
 require 'json'
-require 'fileutils'
-require 'timeout'
 
 # External dependencies
 require 'pry'
@@ -34,8 +32,9 @@ module GitFeed
     # Configuration constants
     # Number of default threads when performing concurrently tasks
     THREADS_NUMBER = 20
-    # Endoint to obtain following users in Github
+    # Github base api URL(scheme + host)
     GITHUB_API_URL = 'https://api.github.com'.freeze
+    # Endoint to obtain following users in Github
     GITHUB_FOLLOWING_USERS_ENDPOINT = "#{GITHUB_API_URL}/users/%{username}/following?page=%{page}&per_page=%{per_page}".freeze
     # Where to save the data downloaded as subdirectory in data/ root directory.
     BLOG_PAGES_DEST_DIRNAME = 'blog-pages'.freeze
@@ -69,6 +68,7 @@ module GitFeed
 
       # Parse 'Link:' header from Github response and obtain the last page
       # to iterate and download each one from the first to last page
+      # TODO: Move to separated method?
       link_header = first_page_response['Link']
       links = link_header.split(', ')
       last_page = ((links.last || '').match(/\bpage=(\d+)\b/)[1] || 1).to_i

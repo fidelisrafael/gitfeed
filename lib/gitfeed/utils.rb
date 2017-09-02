@@ -2,10 +2,12 @@
 
 # rubocop:disable Metrics/LineLength
 
-require 'open-uri'
+# Standard lib dependencies
 require 'net/http'
 require 'openssl'
 require 'timeout'
+require 'json'
+require 'fileutils'
 
 module GitFeed
   # This module contains all helpers methods to deal with HTTP requests and
