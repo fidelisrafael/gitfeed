@@ -48,6 +48,12 @@ Eg:
 $ bin/gitfeed fidelisrafael
 ```
 
+To **suppress** error messages logging(such caused by network error), run as:
+
+```
+$ LOG_ERRORS=false bin/gitfeed fidelisrafael
+```
+
 ---
 
 ## How this works?

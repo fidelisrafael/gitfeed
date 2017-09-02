@@ -41,7 +41,7 @@ module GitFeed
             return get(new_url.to_s, headers, timeout)
           end
 
-          response.body
+          response
         end
       end
     end
@@ -53,7 +53,9 @@ module GitFeed
     end
 
     def get_github_data(url, auth_token = nil)
-      JSON.parse(get(url, github_http_headers(auth_token)))
+      response = get(url, github_http_headers(auth_token)).body
+
+      JSON.parse(response)
     end
 
     def github_http_headers(auth_token)
@@ -64,6 +66,14 @@ module GitFeed
       return false if ENV['FORCE_REFRESH'] == 'true'
 
       file_exists?(filename) && File.size(File.join(DATA_DIRECTORY, filename)) > min_bytes_size
+    end
+
+    def parse_json_directory(glob_pattern)
+      files = Dir.glob(glob_pattern).sort
+
+      files.flat_map do |file|
+        JSON.parse(File.read(file))
+      end
     end
 
     def save_file(filename, data, json = true, open_mode = 'wb')
@@ -94,8 +104,8 @@ module GitFeed
       (uri =~ /^(https?|ftp|file):/) ? uri : "http://#{uri}"
     end
 
-    def normalize_url_for_filename(url)
-      url.gsub(/(\/|\.|:)/, '-').downcase
+    def normalize_filename(filename)
+      filename.to_s.gsub(/(\/|\.|:)/, '-').downcase
     end
 
     def print_counter(current, total)
