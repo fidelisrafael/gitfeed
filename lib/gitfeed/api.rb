@@ -61,8 +61,8 @@ module GitFeed
 
       body
     end
-    # rubocop:enable Metrics/ParameterLists
 
+    # rubocop:enable Metrics/ParameterLists
     def fetch_each_following_users_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
       pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
       first_page_response = get_following_page(username, 1, per_page, auth_user, auth_token)
@@ -85,7 +85,6 @@ module GitFeed
 
       pool.shutdown
     end
-
     # Gihutb User related
 
     def fetch_user_data(username, endpoint, auth_user = nil, auth_token = nil, options = {})

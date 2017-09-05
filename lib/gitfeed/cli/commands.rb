@@ -133,27 +133,32 @@ module GitFeed
           username = File.dirname(feed_filename)
           client = Feedlr::Client.new(oauth_access_token: auth_token)
           feeds = get_json_file_data(feed_filename).map { |f| "feed/#{f}" }
+          success_count = error_count = 0
 
-          feeds.each_with_index do |feed, index|
+          feeds.each do |feed|
             pool.process do
-              print_counter index.next, feeds.size
+              print_counter success_count, error_count
 
+              category_label = "#{FEEDLY_COLLECTION_NAME}:#{username}"
               feed_data = {
                 id: feed,
-                categories: [
-                  { label: "#{FEEDLY_COLLECTION_NAME}:#{username}" }
-                ]
+                categories: [{ label: category_label }]
               }
 
               begin
-                client.add_subscription(feed_data)
+                response = client.add_subscription(feed_data)
+
+                response.empty? ? error_count = error_count.next : success_count = success_count.next 
               rescue => e
+                puts "\n" if log_errors?
+
+                error "Error while importing feed: \"#{feed_data[:id]}\" in \"#{category_label}\""
                 error e.message
               end
             end
           end
 
-          puts
+          puts "\n" if log_errors?
 
           pool.shutdown
         end
