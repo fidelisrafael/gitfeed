@@ -149,7 +149,7 @@ module GitFeed
     # Parse 'Link:' header from Github response and obtain the last page
     # to iterate and download each one from the first to last page
     def last_page_from_link_header(link_response)
-      return 0 if link_response.nil? || link_response.empty?
+      return nil if link_response.nil? || link_response.empty?
 
       links = link_response.split(', ')
 

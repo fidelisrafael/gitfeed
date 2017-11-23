@@ -69,7 +69,7 @@ module GitFeed
 
       return nil if first_page_response.is_a?(Net::HTTPForbidden) # Rate Limit Error
 
-      last_page = last_page_from_link_header(first_page_response['Link'])
+      last_page = last_page_from_link_header(first_page_response['Link']) || 1
 
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
