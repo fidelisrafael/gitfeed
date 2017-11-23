@@ -51,7 +51,7 @@ module GitFeed
       save_file(options[:blogs_list_filename], blogs_urls)
 
       # Now, we concurrently download each given URL in `blogs_urls` array
-      # fetch_each_blog_page(blogs_urls)
+      fetch_each_blog_page(blogs_urls)
 
       # Obtain all pages already downloaded in file system for urls
       blogs_pages = blogs_urls.map do |url|
