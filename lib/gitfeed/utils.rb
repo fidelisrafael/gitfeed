@@ -38,6 +38,12 @@ module GitFeed
       end
     end
 
+    def github_get_paginated(username, endpoint, page, per_page, auth_user = nil, auth_token = nil)
+      paginated_endpoint = endpoint % { username: username, page: page, per_page: per_page }
+
+      get(paginated_endpoint, github_http_headers(auth_user, auth_token))
+    end
+
     def create_http_client(uri)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.scheme == 'https'

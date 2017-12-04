@@ -45,18 +45,15 @@ module GitFeed
 
     # Github Following Pages stuff
     def get_following_page(username, page, per_page, auth_user = nil, auth_token = nil)
-      endpoint = GITHUB_FOLLOWING_USERS_ENDPOINT % { username: username, page: page, per_page: per_page }
-
-      get(endpoint, github_http_headers(auth_user, auth_token))
+      github_get_paginated(username, GITHUB_FOLLOWING_USERS_ENDPOINT, page, per_page, auth_user, auth_token)
     end
 
     # Github Starred Repositories stuff
     def get_starred_page(username, page, per_page, auth_user = nil, auth_token = nil)
-      endpoint = GITHUB_STARRED_REPOS_ENDPOINT % { username: username, page: page, per_page: per_page }
-
-      get(endpoint, github_http_headers(auth_user, auth_token))
+      github_get_paginated(username, GITHUB_STARRED_REPOS_ENDPOINT, page, per_page, auth_user, auth_token)
     end
 
+    # TODO: Refactor (DRY)
     # rubocop:disable Metrics/ParameterLists
     def fetch_following_page(username, page, per_page, auth_user = nil, auth_token = nil, options = {})
       filename = File.join(username, 'following_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
@@ -72,6 +69,7 @@ module GitFeed
     end
     # rubocop:enable Metrics/ParameterLists
 
+    # TODO: Refactor (DRY)
     # rubocop:disable Metrics/ParameterLists
     def fetch_starred_page(username, page, per_page, auth_user = nil, auth_token = nil, options = {})
       filename = File.join(username, 'starred_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
