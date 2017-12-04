@@ -129,6 +129,12 @@ module GitFeed
       true
     end
 
+    def get_blog_page_response(page_url)
+      page_body = get(page_url).body
+
+      "<!-- #{page_url} -->\n#{page_body}"
+    end
+
     # Generic Blog Pages related stuff
 
     def fetch_blog_page(url, dest_dir = BLOG_PAGES_DEST_DIRNAME, retries = 1)
@@ -138,7 +144,7 @@ module GitFeed
 
       begin
         page_url = normalize_uri(url)
-        response = get(page_url).body
+        response = get_blog_page_response(page_url)
 
         save_file(filename, response, false)
 
@@ -170,13 +176,23 @@ module GitFeed
       pool.shutdown
     end
 
+
     def extract_rss_from_blog_page(page)
       page_content = File.read(page)
 
       return [] if page_content.nil? || page_content.empty?
 
-      TruffleHog.parse_feed_urls(page_content).flatten
+      site_url_matches = page_content.lines[0].match(/<!--(.*)-->/)
+      site_url = site_url_matches ? site_url_matches[1].strip.sub(/[\/]+$/, '') : ''
+
+      feed_urls = TruffleHog.parse_feed_urls(page_content).flatten
+
+      feed_urls.map do |feed|
+        normalized_feed = feed.sub(/^[\/]+/, '') # removes / to be appended with site
+        feed.match?(URI.regexp) ? feed : "#{site_url}/#{normalized_feed}"
+      end
     end
+
 
     def extract_each_rss_from_blog_pages(blogs_pages)
       blogs_pages.flat_map.each_with_index do |page, index|

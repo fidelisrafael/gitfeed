@@ -30,12 +30,8 @@ module TruffleHog
     feed_tags = collect(tags, type)
     feed_tags.map do |inner_tag|
       matches = inner_tag.match(/.*href=['"](.*?)['"].*/)
-      url = if matches.nil?
-              ''
-            else
-              matches[1]
-            end
-      url =~ /^http.*/ ? url : nil
+
+      matches.nil? ? nil : matches[1]
     end.compact
   end
 
