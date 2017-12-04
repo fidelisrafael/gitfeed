@@ -111,7 +111,7 @@ module GitFeed
           info 'Searching RSS feed link in downloaded blogs pages'
 
           blogs_feeds = extract_each_rss_from_blog_pages(blogs_pages)
-          save_file(dest_filename, blogs_feeds)
+          save_file(dest_filename, blogs_feeds.uniq)
 
           total_scanned = blogs_pages.size
           total_found = blogs_feeds.size
