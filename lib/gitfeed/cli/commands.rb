@@ -10,6 +10,40 @@ module GitFeed
     # This module basically contains all commands on top of `GitFeed::API` with error
     # handling and formatted output when the verbose mode is activated.
     module Commands
+      # TODO: Refactor DRY
+      def fetch_each_starred_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
+        starred_repositories = []
+        fusername = format_username(username)
+
+        section 'Download starred repositories pages' do
+          info "Ok, lets start grabbing all pages of starred repositories for #{fusername}\n"
+
+          # Download all following users pages to be iterate in next step
+          # (or just skip if is already in file system)
+          API.fetch_each_starred_pages(username, per_page, auth_user, auth_token, options) do |error, _result, current, total|
+            print_counter current.next, total
+
+            if error
+              puts if log_errors?
+
+              error "Error downloading starred page \"#{page}\""
+              error "Message #{error.message}"
+            end
+          end
+
+          puts if verbose?
+
+          starred_pages = File.join(Utils::DATA_DIRECTORY, username, 'starred_pages', '*')
+          starred_repositories = parse_json_directory(starred_pages)
+
+          info '[OK] downloaded'
+          info "Total of #{starred_repositories.size.to_s.underline} repositories starred by #{fusername}"
+        end
+
+        starred_repositories
+      end
+
+      # TODO: Refactor DRY
       def fetch_each_following_users_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
         following_users = []
         fusername = format_username(username)

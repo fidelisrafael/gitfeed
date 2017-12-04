@@ -36,6 +36,8 @@ module GitFeed
     GITHUB_API_URL = 'https://api.github.com'.freeze
     # Endoint to obtain following users in Github
     GITHUB_FOLLOWING_USERS_ENDPOINT = "#{GITHUB_API_URL}/users/%{username}/following?page=%{page}&per_page=%{per_page}".freeze
+    # Endoint to obtain starred repositories by user in Github
+    GITHUB_STARRED_REPOS_ENDPOINT = "#{GITHUB_API_URL}/users/%{username}/starred?page=%{page}&per_page=%{per_page}".freeze
     # Where to save the data downloaded as subdirectory in data/ root directory.
     BLOG_PAGES_DEST_DIRNAME = 'blog-pages'.freeze
 
@@ -44,6 +46,13 @@ module GitFeed
     # Github Following Pages stuff
     def get_following_page(username, page, per_page, auth_user = nil, auth_token = nil)
       endpoint = GITHUB_FOLLOWING_USERS_ENDPOINT % { username: username, page: page, per_page: per_page }
+
+      get(endpoint, github_http_headers(auth_user, auth_token))
+    end
+
+    # Github Starred Repositories stuff
+    def get_starred_page(username, page, per_page, auth_user = nil, auth_token = nil)
+      endpoint = GITHUB_STARRED_REPOS_ENDPOINT % { username: username, page: page, per_page: per_page }
 
       get(endpoint, github_http_headers(auth_user, auth_token))
     end
@@ -63,6 +72,22 @@ module GitFeed
     end
     # rubocop:enable Metrics/ParameterLists
 
+    # rubocop:disable Metrics/ParameterLists
+    def fetch_starred_page(username, page, per_page, auth_user = nil, auth_token = nil, options = {})
+      filename = File.join(username, 'starred_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
+
+      return get_json_file_data(filename) if data_in_cache?(filename, options[:force_refresh])
+
+      response = get_starred_page(username, page, per_page, auth_user, auth_token)
+      body = JSON.parse(response.body)
+
+      save_file(filename, body)
+
+      body
+    end
+    # rubocop:enable Metrics/ParameterLists
+
+    # TODO: Refactor DRY
     def fetch_each_following_users_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
       pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
       first_page_response = get_following_page(username, 1, per_page, auth_user, auth_token)
@@ -75,6 +100,30 @@ module GitFeed
         pool.process do
           begin
             result = fetch_following_page(username, page, per_page, auth_user, auth_token, options)
+
+            yield [nil, result, index, last_page] if block_given?
+          rescue => error
+            yield [error, nil, index, last_page] if block_given?
+          end
+        end
+      end
+
+      pool.shutdown
+    end
+
+    # TODO: Refactor DRY
+    def fetch_each_starred_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
+      pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
+      first_page_response = get_starred_page(username, 1, per_page, auth_user, auth_token)
+
+      return nil if first_page_response.is_a?(Net::HTTPForbidden) # Rate Limit Error
+
+      last_page = last_page_from_link_header(first_page_response['Link']) || 1
+
+      1.upto(last_page).each_with_index do |page, index|
+        pool.process do
+          begin
+            result = fetch_starred_page(username, page, per_page, auth_user, auth_token, options)
 
             yield [nil, result, index, last_page] if block_given?
           rescue => error
