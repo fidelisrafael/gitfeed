@@ -43,6 +43,7 @@ PLATFORMS
 DEPENDENCIES
   feedjira
   feedlr
+  nokogiri
   pry
   puma
   rack

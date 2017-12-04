@@ -36,6 +36,8 @@ module GitFeed
     GITHUB_API_URL = 'https://api.github.com'.freeze
     # Endoint to obtain following users in Github
     GITHUB_FOLLOWING_USERS_ENDPOINT = "#{GITHUB_API_URL}/users/%{username}/following?page=%{page}&per_page=%{per_page}".freeze
+    # Endoint to obtain starred repositories by user in Github
+    GITHUB_STARRED_REPOS_ENDPOINT = "#{GITHUB_API_URL}/users/%{username}/starred?page=%{page}&per_page=%{per_page}".freeze
     # Where to save the data downloaded as subdirectory in data/ root directory.
     BLOG_PAGES_DEST_DIRNAME = 'blog-pages'.freeze
 
@@ -43,11 +45,15 @@ module GitFeed
 
     # Github Following Pages stuff
     def get_following_page(username, page, per_page, auth_user = nil, auth_token = nil)
-      endpoint = GITHUB_FOLLOWING_USERS_ENDPOINT % { username: username, page: page, per_page: per_page }
-
-      get(endpoint, github_http_headers(auth_user, auth_token))
+      github_get_paginated(username, GITHUB_FOLLOWING_USERS_ENDPOINT, page, per_page, auth_user, auth_token)
     end
 
+    # Github Starred Repositories stuff
+    def get_starred_page(username, page, per_page, auth_user = nil, auth_token = nil)
+      github_get_paginated(username, GITHUB_STARRED_REPOS_ENDPOINT, page, per_page, auth_user, auth_token)
+    end
+
+    # TODO: Refactor (DRY)
     # rubocop:disable Metrics/ParameterLists
     def fetch_following_page(username, page, per_page, auth_user = nil, auth_token = nil, options = {})
       filename = File.join(username, 'following_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
@@ -62,14 +68,30 @@ module GitFeed
       body
     end
 
+    # TODO: Refactor (DRY)
+    # rubocop:disable Metrics/ParameterLists
+    def fetch_starred_page(username, page, per_page, auth_user = nil, auth_token = nil, options = {})
+      filename = File.join(username, 'starred_pages', "page_#{'%02d' % page}_per_page_#{per_page}.json")
+
+      return get_json_file_data(filename) if data_in_cache?(filename, options[:force_refresh])
+
+      response = get_starred_page(username, page, per_page, auth_user, auth_token)
+      body = JSON.parse(response.body)
+
+      save_file(filename, body)
+
+      body
+    end
     # rubocop:enable Metrics/ParameterLists
+
+    # TODO: Refactor DRY
     def fetch_each_following_users_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
       pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
       first_page_response = get_following_page(username, 1, per_page, auth_user, auth_token)
 
       return nil if first_page_response.is_a?(Net::HTTPForbidden) # Rate Limit Error
 
-      last_page = last_page_from_link_header(first_page_response['Link'])
+      last_page = last_page_from_link_header(first_page_response['Link']) || 1
 
       1.upto(last_page).each_with_index do |page, index|
         pool.process do
@@ -85,6 +107,31 @@ module GitFeed
 
       pool.shutdown
     end
+
+    # TODO: Refactor DRY
+    def fetch_each_starred_pages(username, per_page, auth_user = nil, auth_token = nil, options = {})
+      pool = Thread.pool(options[:num_threads] || THREADS_NUMBER)
+      first_page_response = get_starred_page(username, 1, per_page, auth_user, auth_token)
+
+      return nil if first_page_response.is_a?(Net::HTTPForbidden) # Rate Limit Error
+
+      last_page = last_page_from_link_header(first_page_response['Link']) || 1
+
+      1.upto(last_page).each_with_index do |page, index|
+        pool.process do
+          begin
+            result = fetch_starred_page(username, page, per_page, auth_user, auth_token, options)
+
+            yield [nil, result, index, last_page] if block_given?
+          rescue => error
+            yield [error, nil, index, last_page] if block_given?
+          end
+        end
+      end
+
+      pool.shutdown
+    end
+
     # Gihutb User related
 
     def fetch_user_data(username, endpoint, auth_user = nil, auth_token = nil, options = {})
@@ -128,6 +175,12 @@ module GitFeed
       true
     end
 
+    def get_blog_page_response(page_url)
+      page_body = get(page_url).body
+
+      "<!-- #{page_url} -->\n#{page_body}"
+    end
+
     # Generic Blog Pages related stuff
 
     def fetch_blog_page(url, dest_dir = BLOG_PAGES_DEST_DIRNAME, retries = 1)
@@ -137,7 +190,7 @@ module GitFeed
 
       begin
         page_url = normalize_uri(url)
-        response = get(page_url).body
+        response = get_blog_page_response(page_url)
 
         save_file(filename, response, false)
 
@@ -169,13 +222,23 @@ module GitFeed
       pool.shutdown
     end
 
+
     def extract_rss_from_blog_page(page)
       page_content = File.read(page)
 
       return [] if page_content.nil? || page_content.empty?
 
-      TruffleHog.parse_feed_urls(page_content).flatten
+      site_url_matches = page_content.lines[0].match(/<!--(.*)-->/)
+      site_url = site_url_matches ? site_url_matches[1].strip.sub(/[\/]+$/, '') : ''
+
+      feed_urls = TruffleHog.parse_feed_urls(page_content).flatten
+
+      feed_urls.map do |feed|
+        normalized_feed = feed.sub(/^[\/]+/, '') # removes / to be appended with site
+        feed.match?(URI.regexp) ? feed : "#{site_url}/#{normalized_feed}"
+      end
     end
+
 
     def extract_each_rss_from_blog_pages(blogs_pages)
       blogs_pages.flat_map.each_with_index do |page, index|

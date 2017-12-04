@@ -43,15 +43,24 @@ module GitFeed
       # Real stuff happening
       # Frist step: Download all following pages of given username
       following_users = fetch_each_following_users_pages(username, per_page, auth_user, auth_token, options)
+
+      # Download all starred pages for given username
+      starred_pages = fetch_each_starred_pages(username, per_page, auth_user, auth_token, options)
+      # Obtain all users from starred repositories
+      starred_users = starred_pages.map {|s| s['owner'] }
+
+      # Following users + users from starred repositories (removing duplicated)
+      users_to_fetch = Set.new(following_users + starred_users)
+
       # After download all users of each page download above
-      users = fetch_each_user_data(following_users, auth_user, auth_token, options)
+      users = fetch_each_user_data(users_to_fetch, auth_user, auth_token, options)
 
       # With all users followed by `username` downloaded we can obtain their blog url
       blogs_urls = users.map { |user| user['blog'] }.compact.reject(&:empty?).uniq
       save_file(options[:blogs_list_filename], blogs_urls)
 
       # Now, we concurrently download each given URL in `blogs_urls` array
-      # fetch_each_blog_page(blogs_urls)
+      fetch_each_blog_page(blogs_urls)
 
       # Obtain all pages already downloaded in file system for urls
       blogs_pages = blogs_urls.map do |url|
